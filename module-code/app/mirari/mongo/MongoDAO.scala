@@ -242,7 +242,9 @@ abstract class MongoDAO[D <% MongoDomain](val collectionName: String) extends Mo
    */
   protected def failOrTrue(err: LastError): Boolean =
     if (err.inError) throw DatabaseError(err) else true
+}
 
+object MongoDAO {
   abstract class Oid[D <: MongoDomain.Oid](collectionName: String) extends MongoDAO[D](collectionName) with MongoImplicits {
     protected def generateSomeId = Some(BSONObjectID.generate)
 
