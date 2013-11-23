@@ -19,7 +19,7 @@ import reactivemongo.api.QueryOpts
  * @author alari
  * @since 7/4/13 11:07 PM
  */
-abstract class MongoDAO[D <% MongoDomain](val collectionName: String) extends MongoImplicits{
+abstract class MongoDAO[D <% MongoDomain[_]](val collectionName: String) extends MongoImplicits{
   /**
    * ReactiveMongo database accessor
    * @return
