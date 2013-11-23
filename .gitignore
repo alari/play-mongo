@@ -1,0 +1,6 @@
+.DS_Store
+.idea
+.idea_modules
+/module-code/target
+/module-code/project/target
+/module-code/project/project/target
