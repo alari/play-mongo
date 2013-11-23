@@ -265,6 +265,7 @@ object MongoDAO {
             ids
               .view
               .map(BSONObjectID.parse)
+              .map{i => play.api.Logger.debug(i.toString);i}
               .filter(_.isSuccess)
               .map(_.get)
               .force
