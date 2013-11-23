@@ -126,13 +126,14 @@ abstract class MongoDAO[D <% MongoDomain[_]](val collectionName: String) extends
    * @param obj updated object
    * @return updated object
    */
-  def update(obj: D): Future[D] = {
-    if (!obj.hasId) throw EmptyId()
-    (__ \ "_id").prune(Json.toJson(obj)).asOpt.map {
-      json =>
-        collection.update(toObjectId(obj.id), Json.obj("$set" -> json)).map(failOrObj(obj))
-    } getOrElse Future.failed(NotFound())
-  }
+  def update(obj: D): Future[D] =
+    if (!obj.hasId) Future.failed(EmptyId())
+    else
+      (__ \ "_id").prune(Json.toJson(obj)).asOpt.map {
+        json =>
+          collection.update(toObjectId(obj.id), Json.obj("$set" -> json)).map(failOrObj(obj))
+      } getOrElse Future.failed(NotFound())
+
 
   /**
    * Sets properties for id
@@ -223,10 +224,11 @@ abstract class MongoDAO[D <% MongoDomain[_]](val collectionName: String) extends
    * @param obj
    * @return
    */
-  protected def insert(obj: D): Future[D] = {
-    if (!obj.hasId) throw EmptyId()
-    collection.insert(obj).map(failOrObj(obj))
-  }
+  protected def insert(obj: D): Future[D] =
+    if (!obj.hasId)
+      Future.failed(EmptyId())
+    else
+      collection.insert(obj).map(failOrObj(obj))
 
   /**
    * Returns passed object if not in error state, throws DatabaseError otherwise
@@ -265,7 +267,6 @@ object MongoDAO {
             ids
               .view
               .map(BSONObjectID.parse)
-              .map{i => play.api.Logger.debug(i.toString);i}
               .filter(_.isSuccess)
               .map(_.get)
               .force
