@@ -19,15 +19,43 @@ import reactivemongo.api.QueryOpts
  * @author alari
  * @since 7/4/13 11:07 PM
  */
-abstract class MongoDAO[D <% MongoDomain](val collectionName: String) extends MongoImplicits {
-  def db = ReactiveMongoPlugin.db
+abstract class MongoDAO[D <% MongoDomain](val collectionName: String) extends MongoImplicits{
+  /**
+   * ReactiveMongo database accessor
+   * @return
+   */
+  protected def db = ReactiveMongoPlugin.db
 
-  def format: Format[D]
+  /**
+   * You must implement it like Json.format[D]
+   * @return
+   */
+  protected def format: Format[D]
 
-  implicit def f = format
+  /**
+   * Internal implicit format
+   * @return
+   */
+  implicit protected def f = format
 
-  protected def generateSomeId = Some(BSONObjectID.generate)
+  /**
+   * Converts string id into database representation
+   * @param id string
+   * @return $oid or string representation
+   */
+  protected def toId(id: String): JsValue
 
+  /**
+   * _id -> (id)
+   * @param id string
+   * @return
+   */
+  protected def toObjectId(id: String) = Json.obj("_id" -> toId(id))
+
+  /**
+   * Reactive's JSON collection
+   * @return
+   */
   protected def collection: JSONCollection = db.collection[JSONCollection](collectionName)
 
   protected val Ascending = IndexType.Ascending
@@ -74,7 +102,7 @@ abstract class MongoDAO[D <% MongoDomain](val collectionName: String) extends Mo
    * @return
    */
   def getById(id: String): Future[D] =
-    collection.find(toObjectId.writes(id)).one[D] map {
+    collection.find(toObjectId(id)).one[D] map {
       case Some(d) => d
       case None => throw NotFound()
     }
@@ -88,30 +116,21 @@ abstract class MongoDAO[D <% MongoDomain](val collectionName: String) extends Mo
     collection.find(
       Json.obj("_id" ->
         Json.obj("$in" ->
-          ids
-            .view
-            .map(BSONObjectID.parse)
-            .filter(_.isSuccess)
-            .map(_.get)
-            .force
+          ids.map(toId)
         )))
       .cursor[D]
       .collect[List](ids.length)
 
   /**
    * Updates an object by id
-   * @param id object id
    * @param obj updated object
    * @return updated object
    */
-  def update(id: String, obj: D): Future[D] = {
-    implicit val f = format
-
+  def update(obj: D): Future[D] =
     (__ \ "_id").prune(Json.toJson(obj)).asOpt.map {
       json =>
-        collection.update(toObjectId.writes(id), Json.obj("$set" -> json)).map(failOrObj(obj))
+        collection.update(toObjectId(obj.id), Json.obj("$set" -> json)).map(failOrObj(obj))
     } getOrElse Future.failed(NotFound())
-  }
 
   /**
    * Sets properties for id
@@ -120,7 +139,7 @@ abstract class MongoDAO[D <% MongoDomain](val collectionName: String) extends Mo
    * @return changed object
    */
   def set(id: String, obj: JsObject): Future[D] =
-    collection.update(toObjectId.writes(id), Json.obj("$set" -> Json.toJson(obj))).flatMap {
+    collection.update(toObjectId(id), Json.obj("$set" -> Json.toJson(obj))).flatMap {
       lastError =>
         lastError.inError match {
           case true =>
@@ -194,7 +213,7 @@ abstract class MongoDAO[D <% MongoDomain](val collectionName: String) extends Mo
    * @return true
    */
   def remove(id: String): Future[Boolean] =
-    collection.remove(toObjectId.writes(id)).map(failOrTrue)
+    collection.remove(toObjectId(id)).map(failOrTrue)
 
 
   /**
@@ -223,4 +242,14 @@ abstract class MongoDAO[D <% MongoDomain](val collectionName: String) extends Mo
    */
   protected def failOrTrue(err: LastError): Boolean =
     if (err.inError) throw DatabaseError(err) else true
+
+  abstract class Oid[D <: MongoDomain.Oid](collectionName: String) extends MongoDAO[D](collectionName) with MongoImplicits {
+    protected def generateSomeId = Some(BSONObjectID.generate)
+
+    override protected def toId(id: String) = Json.obj("$oid" -> id)
+  }
+
+  abstract class Str[D <: MongoDomain.Str](collectionName: String) extends MongoDAO[D](collectionName) {
+    override protected def toId(id: String) = JsString(id)
+  }
 }
