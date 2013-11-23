@@ -126,11 +126,13 @@ abstract class MongoDAO[D <% MongoDomain](val collectionName: String) extends Mo
    * @param obj updated object
    * @return updated object
    */
-  def update(obj: D): Future[D] =
+  def update(obj: D): Future[D] = {
+    if(!obj.hasId) throw EmptyId()
     (__ \ "_id").prune(Json.toJson(obj)).asOpt.map {
       json =>
         collection.update(toObjectId(obj.id), Json.obj("$set" -> json)).map(failOrObj(obj))
     } getOrElse Future.failed(NotFound())
+  }
 
   /**
    * Sets properties for id
@@ -222,7 +224,7 @@ abstract class MongoDAO[D <% MongoDomain](val collectionName: String) extends Mo
    * @return
    */
   protected def insert(obj: D): Future[D] = {
-    require(obj.id != "", "_id must be set")
+    if(!obj.hasId) throw EmptyId()
     collection.insert(obj).map(failOrObj(obj))
   }
 

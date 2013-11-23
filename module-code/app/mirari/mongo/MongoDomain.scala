@@ -10,8 +10,10 @@ import play.api.libs.json.{JsString, Json, JsValue}
  * @author alari
  * @since 8/1/13 12:24 AM
  */
-trait MongoDomain {
+trait MongoDomain[Id] {
+  def _id: Option[Id]
   def id: String
+  def hasId = _id.isDefined
 }
 
 object MongoDomain {
@@ -19,16 +21,13 @@ object MongoDomain {
   /**
    * Domain with ObjectID _id
    */
-  trait Oid extends MongoDomain{
-    self: {def _id: Oid.Id}=>
-
+  trait Oid extends MongoDomain[BSONObjectID]{
     def id = _id.map(_.stringify).getOrElse("")
 
     def idTimestamp = _id.map(_.time)
 
     def idDatetime = idTimestamp.map(new DateTime(_))
   }
-
 
   object Oid {
     type Id = Option[BSONObjectID]
@@ -37,9 +36,7 @@ object MongoDomain {
   /**
    * Domain with String _id -- generate and build it yourself!
    */
-  trait Str extends MongoDomain {
-    self: {def _id: Str.Id}=>
-
+  trait Str extends MongoDomain[String] {
     def id = _id.getOrElse("")
   }
 
