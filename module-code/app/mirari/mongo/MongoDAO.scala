@@ -19,7 +19,7 @@ import reactivemongo.api.QueryOpts
  * @author alari
  * @since 7/4/13 11:07 PM
  */
-abstract class MongoDAO[D <% MongoDomain[_]](val collectionName: String) extends MongoImplicits{
+abstract class MongoDAO[D <% MongoDomain[_]](val collectionName: String) extends MongoImplicits {
   /**
    * ReactiveMongo database accessor
    * @return
@@ -127,7 +127,7 @@ abstract class MongoDAO[D <% MongoDomain[_]](val collectionName: String) extends
    * @return updated object
    */
   def update(obj: D): Future[D] = {
-    if(!obj.hasId) throw EmptyId()
+    if (!obj.hasId) throw EmptyId()
     (__ \ "_id").prune(Json.toJson(obj)).asOpt.map {
       json =>
         collection.update(toObjectId(obj.id), Json.obj("$set" -> json)).map(failOrObj(obj))
@@ -224,7 +224,7 @@ abstract class MongoDAO[D <% MongoDomain[_]](val collectionName: String) extends
    * @return
    */
   protected def insert(obj: D): Future[D] = {
-    if(!obj.hasId) throw EmptyId()
+    if (!obj.hasId) throw EmptyId()
     collection.insert(obj).map(failOrObj(obj))
   }
 
@@ -247,13 +247,34 @@ abstract class MongoDAO[D <% MongoDomain[_]](val collectionName: String) extends
 }
 
 object MongoDAO {
+
   abstract class Oid[D <: MongoDomain.Oid](collectionName: String) extends MongoDAO[D](collectionName) with MongoImplicits {
     protected def generateSomeId = Some(BSONObjectID.generate)
 
     override protected def toId(id: String) = Json.obj("$oid" -> id)
+
+    /**
+     * Returns list of objects by ids. Output may be less then input
+     * @param ids ids
+     * @return
+     */
+    override def getByIds(ids: Seq[String]): Future[List[D]] =
+      collection.find(
+        Json.obj("_id" ->
+          Json.obj("$in" ->
+            ids
+              .view
+              .map(BSONObjectID.parse)
+              .filter(_.isSuccess)
+              .map(_.get)
+              .force
+          )))
+        .cursor[D]
+        .collect[List](ids.length)
   }
 
   abstract class Str[D <: MongoDomain.Str](collectionName: String) extends MongoDAO[D](collectionName) {
     override protected def toId(id: String) = JsString(id)
   }
+
 }
