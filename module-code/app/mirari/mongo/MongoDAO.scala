@@ -98,7 +98,7 @@ abstract class MongoDAO[D <% MongoDomain[_]](val collectionName: String) extends
 
   /**
    * Returns an object by id or throws NotFound
-   * @param id
+   * @param id id
    * @return
    */
   def getById(id: String): Future[D] =
@@ -221,7 +221,7 @@ abstract class MongoDAO[D <% MongoDomain[_]](val collectionName: String) extends
 
   /**
    * Inserts new object into collection. Note: _id must be set
-   * @param obj
+   * @param obj object to insert
    * @return
    */
   protected def insert(obj: D): Future[D] =
@@ -253,8 +253,7 @@ object MongoDAO {
   abstract class Oid[D <: MongoDomain.Oid](collectionName: String) extends MongoDAO[D](collectionName) with MongoImplicits {
     protected def generateSomeId = Some(BSONObjectID.generate)
 
-    override protected def toId(id: String) = Json.obj("$oid" -> id)
-
+    override protected def toId(id: String): JsValue = Json.toJson(BSONObjectID.parse(id).getOrElse(throw new EmptyId()))
     /**
      * Returns list of objects by ids. Output may be less then input
      * @param ids ids
