@@ -104,7 +104,7 @@ abstract class MongoDAO[D <% MongoDomain[_]](val collectionName: String) extends
   def getById(id: String): Future[D] =
     collection.find(toObjectId(id)).one[D] map {
       case Some(d) => d
-      case None => throw NotFound()
+      case None => throw NotFound(s"$id in $collectionName")
     }
 
   /**
@@ -132,7 +132,7 @@ abstract class MongoDAO[D <% MongoDomain[_]](val collectionName: String) extends
       (__ \ "_id").prune(Json.toJson(obj)).asOpt.map {
         json =>
           collection.update(toObjectId(obj.id), Json.obj("$set" -> json)).map(failOrObj(obj))
-      } getOrElse Future.failed(NotFound())
+      } getOrElse Future.failed(NotFound(s"${obj.id} in $collectionName during update"))
 
 
   /**

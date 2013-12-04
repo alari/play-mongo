@@ -9,4 +9,4 @@ case class DatabaseError(lastError: LastError) extends MongoError(500)
 
 case class EmptyId() extends MongoError(404)
 
-case class NotFound() extends MongoError(404)
+case class NotFound(what: String) extends MongoError(404)
