@@ -98,13 +98,18 @@ abstract class MongoDAO[D <% MongoDomain[_]](val collectionName: String) extends
 
   /**
    * Returns an object by id or throws NotFound
-   * @param id
+   * @param id id
    * @return
    */
   def getById(id: String): Future[D] =
-    collection.find(toObjectId(id)).one[D] map {
-      case Some(d) => d
-      case None => throw NotFound()
+    try {
+      collection.find(toObjectId(id)).one[D] map {
+        case Some(d) => d
+        case None => throw NotFound(s"$id in $collectionName")
+      }
+    } catch {
+      case e: Throwable =>
+        Future.failed(e)
     }
 
   /**
@@ -113,13 +118,18 @@ abstract class MongoDAO[D <% MongoDomain[_]](val collectionName: String) extends
    * @return
    */
   def getByIds(ids: Seq[String]): Future[List[D]] =
-    collection.find(
-      Json.obj("_id" ->
-        Json.obj("$in" ->
-          ids.map(toId)
-        )))
-      .cursor[D]
-      .collect[List](ids.length)
+    try {
+      collection.find(
+        Json.obj("_id" ->
+          Json.obj("$in" ->
+            ids.map(toId)
+          )))
+        .cursor[D]
+        .collect[List](ids.length)
+    } catch {
+      case e: Throwable =>
+        Future.failed(e)
+    }
 
   /**
    * Updates an object by id
@@ -127,12 +137,17 @@ abstract class MongoDAO[D <% MongoDomain[_]](val collectionName: String) extends
    * @return updated object
    */
   def update(obj: D): Future[D] =
-    if (!obj.hasId) Future.failed(EmptyId())
-    else
-      (__ \ "_id").prune(Json.toJson(obj)).asOpt.map {
-        json =>
-          collection.update(toObjectId(obj.id), Json.obj("$set" -> json)).map(failOrObj(obj))
-      } getOrElse Future.failed(NotFound())
+    try {
+      if (!obj.hasId) Future.failed(EmptyId())
+      else
+        (__ \ "_id").prune(Json.toJson(obj)).asOpt.map {
+          json =>
+            collection.update(toObjectId(obj.id), Json.obj("$set" -> json)).map(failOrObj(obj))
+        } getOrElse Future.failed(NotFound(s"${obj.id} in $collectionName during update"))
+    } catch {
+      case e: Throwable =>
+        Future.failed(e)
+    }
 
 
   /**
@@ -142,14 +157,19 @@ abstract class MongoDAO[D <% MongoDomain[_]](val collectionName: String) extends
    * @return changed object
    */
   def set(id: String, obj: JsObject): Future[D] =
-    collection.update(toObjectId(id), Json.obj("$set" -> Json.toJson(obj))).flatMap {
-      lastError =>
-        lastError.inError match {
-          case true =>
-            Future.failed(DatabaseError(lastError))
-          case false =>
-            getById(id)
-        }
+    try {
+      collection.update(toObjectId(id), Json.obj("$set" -> Json.toJson(obj))).flatMap {
+        lastError =>
+          lastError.inError match {
+            case true =>
+              Future.failed(DatabaseError(lastError))
+            case false =>
+              getById(id)
+          }
+      }
+    } catch {
+      case e: Throwable =>
+        Future.failed(e)
     }
 
   /**
@@ -158,17 +178,28 @@ abstract class MongoDAO[D <% MongoDomain[_]](val collectionName: String) extends
    * @return
    */
   def findOne(finder: JsObject): Future[Option[D]] =
-    collection.find(finder).one[D]
+    try {
+      collection.find(finder).one[D]
+    } catch {
+      case e: Throwable =>
+        Future.failed(e)
+    }
 
   /**
    * Finder helper
    * @param finder query document
    * @return sequence
    */
-  def find(finder: JsObject): Future[List[D]] = collection
-    .find(finder)
-    .cursor[D]
-    .collect[List]()
+  def find(finder: JsObject): Future[List[D]] =
+    try {
+      collection
+        .find(finder)
+        .cursor[D]
+        .collect[List]()
+    } catch {
+      case e: Throwable =>
+        Future.failed(e)
+    }
 
   /**
    * Finder helper
@@ -177,11 +208,17 @@ abstract class MongoDAO[D <% MongoDomain[_]](val collectionName: String) extends
    * @param limit upTo
    * @return sequence
    */
-  def find(finder: JsObject, offset: Int, limit: Int): Future[List[D]] = collection
-    .find(finder)
-    .options(QueryOpts(skipN = offset))
-    .cursor[D]
-    .collect[List](limit)
+  def find(finder: JsObject, offset: Int, limit: Int): Future[List[D]] =
+    try {
+      collection
+        .find(finder)
+        .options(QueryOpts(skipN = offset))
+        .cursor[D]
+        .collect[List](limit)
+    } catch {
+      case e: Throwable =>
+        Future.failed(e)
+    }
 
   /**
    * Finder helper
@@ -189,11 +226,17 @@ abstract class MongoDAO[D <% MongoDomain[_]](val collectionName: String) extends
    * @param sort sorting document
    * @return sequence
    */
-  def find(finder: JsObject, sort: JsObject): Future[List[D]] = collection
-    .find(finder)
-    .sort(sort)
-    .cursor[D]
-    .collect[List]()
+  def find(finder: JsObject, sort: JsObject): Future[List[D]] =
+    try {
+      collection
+        .find(finder)
+        .sort(sort)
+        .cursor[D]
+        .collect[List]()
+    } catch {
+      case e: Throwable =>
+        Future.failed(e)
+    }
 
   /**
    * Finder helper
@@ -203,12 +246,18 @@ abstract class MongoDAO[D <% MongoDomain[_]](val collectionName: String) extends
    * @param limit upTo
    * @return sequence
    */
-  def find(finder: JsObject, sort: JsObject, offset: Int, limit: Int): Future[List[D]] = collection
-    .find(finder)
-    .options(QueryOpts(skipN = offset))
-    .sort(sort)
-    .cursor[D]
-    .collect[List](limit)
+  def find(finder: JsObject, sort: JsObject, offset: Int, limit: Int): Future[List[D]] =
+    try {
+      collection
+        .find(finder)
+        .options(QueryOpts(skipN = offset))
+        .sort(sort)
+        .cursor[D]
+        .collect[List](limit)
+    } catch {
+      case e: Throwable =>
+        Future.failed(e)
+    }
 
   /**
    * Removes object by id
@@ -216,19 +265,28 @@ abstract class MongoDAO[D <% MongoDomain[_]](val collectionName: String) extends
    * @return true
    */
   def remove(id: String): Future[Boolean] =
-    collection.remove(toObjectId(id)).map(failOrTrue)
+    try {
+      collection.remove(toObjectId(id)).map(failOrTrue)
+    } catch {
+      case e: Throwable =>
+        Future.failed(e)
+    }
 
 
   /**
    * Inserts new object into collection. Note: _id must be set
-   * @param obj
+   * @param obj object to insert
    * @return
    */
   protected def insert(obj: D): Future[D] =
     if (!obj.hasId)
       Future.failed(EmptyId())
-    else
+    else try {
       collection.insert(obj).map(failOrObj(obj))
+    } catch {
+      case e: Throwable =>
+        Future.failed(e)
+    }
 
   /**
    * Returns passed object if not in error state, throws DatabaseError otherwise
@@ -253,7 +311,7 @@ object MongoDAO {
   abstract class Oid[D <: MongoDomain.Oid](collectionName: String) extends MongoDAO[D](collectionName) with MongoImplicits {
     protected def generateSomeId = Some(BSONObjectID.generate)
 
-    override protected def toId(id: String) = Json.obj("$oid" -> id)
+    override protected def toId(id: String): JsValue = Json.toJson(BSONObjectID.parse(id).getOrElse(throw new EmptyId()))
 
     /**
      * Returns list of objects by ids. Output may be less then input
@@ -261,18 +319,23 @@ object MongoDAO {
      * @return
      */
     override def getByIds(ids: Seq[String]): Future[List[D]] =
-      collection.find(
-        Json.obj("_id" ->
-          Json.obj("$in" ->
-            ids
-              .view
-              .map(BSONObjectID.parse)
-              .filter(_.isSuccess)
-              .map(_.get)
-              .force
-          )))
-        .cursor[D]
-        .collect[List](ids.length)
+      try {
+        collection.find(
+          Json.obj("_id" ->
+            Json.obj("$in" ->
+              ids
+                .view
+                .map(BSONObjectID.parse)
+                .filter(_.isSuccess)
+                .map(_.get)
+                .force
+            )))
+          .cursor[D]
+          .collect[List](ids.length)
+      } catch {
+        case e: Throwable =>
+          Future.failed(e)
+      }
   }
 
   abstract class Str[D <: MongoDomain.Str](collectionName: String) extends MongoDAO[D](collectionName) {
