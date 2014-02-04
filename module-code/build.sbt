@@ -6,7 +6,7 @@ version := "1.0-SNAPSHOT"
 
 libraryDependencies ++= Seq(
     "ru.mirari" %% "play-wished" % "1.0-SNAPSHOT",
-    "org.reactivemongo" %% "play2-reactivemongo" % "0.10.0"
+    "org.reactivemongo" %% "play2-reactivemongo" % "0.10.2"
 )
 
 publishTo := {
