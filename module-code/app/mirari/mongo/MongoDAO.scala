@@ -3,7 +3,6 @@ package mirari.mongo
 import play.api.Play.current
 
 import scala.concurrent.{ExecutionContext, Future}
-import ExecutionContext.Implicits.global
 import play.api.libs.json._
 
 import play.modules.reactivemongo.ReactiveMongoPlugin
@@ -65,7 +64,7 @@ abstract class MongoDAO[D <% MongoDomain[_]](val collectionName: String) extends
    * Ensures common non-unique index
    * @param key column -> index type
    */
-  protected def ensureIndex(key: (String, IndexType)*) {
+  protected def ensureIndex(key: (String, IndexType)*)(implicit ec: ExecutionContext) {
     ensureIndex(unique = false)(key: _*)
   }
 
@@ -78,7 +77,7 @@ abstract class MongoDAO[D <% MongoDomain[_]](val collectionName: String) extends
    * @param key column -> Ascending, Descending or other index type
    * @return
    */
-  protected def ensureIndex(unique: Boolean = false, dropDups: Boolean = false, sparse: Boolean = false, name: Option[String] = None)(key: (String, IndexType)*) {
+  protected def ensureIndex(unique: Boolean = false, dropDups: Boolean = false, sparse: Boolean = false, name: Option[String] = None)(key: (String, IndexType)*)(implicit ec: ExecutionContext) {
     collection.indexesManager.ensure(Index(key, unique = unique, dropDups = dropDups, sparse = sparse, name = name))
   }
 
@@ -89,7 +88,7 @@ abstract class MongoDAO[D <% MongoDomain[_]](val collectionName: String) extends
    * @param id optional id
    * @return
    */
-  def getById(id: Option[String]): Future[Option[D]] = id match {
+  def getById(id: Option[String])(implicit ec: ExecutionContext): Future[Option[D]] = id match {
     case Some(_id) =>
       getById(_id).map(Some(_))
     case _ =>
@@ -101,7 +100,7 @@ abstract class MongoDAO[D <% MongoDomain[_]](val collectionName: String) extends
    * @param id id
    * @return
    */
-  def getById(id: String): Future[D] =
+  def getById(id: String)(implicit ec: ExecutionContext): Future[D] =
     try {
       collection.find(toObjectId(id)).one[D] map {
         case Some(d) => d
@@ -113,11 +112,20 @@ abstract class MongoDAO[D <% MongoDomain[_]](val collectionName: String) extends
     }
 
   /**
+   * Finds one object by id
+   * @param id
+   * @param ec
+   * @return
+   */
+  def findById(id: String)(implicit ec: ExecutionContext): Future[Option[D]] =
+    findOne(toObjectId(id))
+
+  /**
    * Returns list of objects by ids. Output may be less then input
    * @param ids ids
    * @return
    */
-  def getByIds(ids: Seq[String]): Future[List[D]] =
+  def getByIds(ids: Seq[String])(implicit ec: ExecutionContext): Future[List[D]] =
     try {
       collection.find(
         Json.obj("_id" ->
@@ -136,7 +144,7 @@ abstract class MongoDAO[D <% MongoDomain[_]](val collectionName: String) extends
    * @param obj updated object
    * @return updated object
    */
-  def update(obj: D): Future[D] =
+  def update(obj: D)(implicit ec: ExecutionContext): Future[D] =
     try {
       if (!obj.hasId) Future.failed(EmptyId())
       else
@@ -156,7 +164,7 @@ abstract class MongoDAO[D <% MongoDomain[_]](val collectionName: String) extends
    * @param obj properties to set
    * @return changed object
    */
-  def set(id: String, obj: JsObject): Future[D] =
+  def set(id: String, obj: JsObject)(implicit ec: ExecutionContext): Future[D] =
     try {
       collection.update(toObjectId(id), Json.obj("$set" -> Json.toJson(obj))).flatMap {
         lastError =>
@@ -177,7 +185,7 @@ abstract class MongoDAO[D <% MongoDomain[_]](val collectionName: String) extends
    * @param finder query
    * @return
    */
-  def findOne(finder: JsObject): Future[Option[D]] =
+  def findOne(finder: JsObject)(implicit ec: ExecutionContext): Future[Option[D]] =
     try {
       collection.find(finder).one[D]
     } catch {
@@ -190,7 +198,7 @@ abstract class MongoDAO[D <% MongoDomain[_]](val collectionName: String) extends
    * @param finder query document
    * @return sequence
    */
-  def find(finder: JsObject): Future[List[D]] =
+  def find(finder: JsObject)(implicit ec: ExecutionContext): Future[List[D]] =
     try {
       collection
         .find(finder)
@@ -208,7 +216,7 @@ abstract class MongoDAO[D <% MongoDomain[_]](val collectionName: String) extends
    * @param limit upTo
    * @return sequence
    */
-  def find(finder: JsObject, offset: Int, limit: Int): Future[List[D]] =
+  def find(finder: JsObject, offset: Int, limit: Int)(implicit ec: ExecutionContext): Future[List[D]] =
     try {
       collection
         .find(finder)
@@ -226,7 +234,7 @@ abstract class MongoDAO[D <% MongoDomain[_]](val collectionName: String) extends
    * @param sort sorting document
    * @return sequence
    */
-  def find(finder: JsObject, sort: JsObject): Future[List[D]] =
+  def find(finder: JsObject, sort: JsObject)(implicit ec: ExecutionContext): Future[List[D]] =
     try {
       collection
         .find(finder)
@@ -246,7 +254,7 @@ abstract class MongoDAO[D <% MongoDomain[_]](val collectionName: String) extends
    * @param limit upTo
    * @return sequence
    */
-  def find(finder: JsObject, sort: JsObject, offset: Int, limit: Int): Future[List[D]] =
+  def find(finder: JsObject, sort: JsObject, offset: Int, limit: Int)(implicit ec: ExecutionContext): Future[List[D]] =
     try {
       collection
         .find(finder)
@@ -264,7 +272,7 @@ abstract class MongoDAO[D <% MongoDomain[_]](val collectionName: String) extends
    * @param id to remove
    * @return true
    */
-  def remove(id: String): Future[Boolean] =
+  def remove(id: String)(implicit ec: ExecutionContext): Future[Boolean] =
     try {
       collection.remove(toObjectId(id)).map(failOrTrue)
     } catch {
@@ -272,13 +280,40 @@ abstract class MongoDAO[D <% MongoDomain[_]](val collectionName: String) extends
         Future.failed(e)
     }
 
+  /**
+   * Removes single object by finder
+   * @param finder
+   * @param ec
+   * @return
+   */
+  def remove(finder: JsObject)(implicit ec: ExecutionContext): Future[Boolean] =
+    try {
+      collection.remove(finder, firstMatchOnly = true).map(failOrTrue)
+    } catch {
+      case e: Throwable =>
+      Future.failed(e)
+    }
+
+  /**
+   * Removes all objects by finder
+   * @param finder
+   * @param ec
+   * @return
+   */
+  def removeAll(finder: JsObject)(implicit ec: ExecutionContext): Future[Boolean] =
+    try {
+      collection.remove(finder, firstMatchOnly = false).map(failOrTrue)
+    } catch {
+      case e: Throwable =>
+        Future.failed(e)
+    }
 
   /**
    * Inserts new object into collection. Note: _id must be set
    * @param obj object to insert
    * @return
    */
-  protected def insert(obj: D): Future[D] =
+  protected def insert(obj: D)(implicit ec: ExecutionContext): Future[D] =
     if (!obj.hasId)
       Future.failed(EmptyId())
     else try {
@@ -318,7 +353,7 @@ object MongoDAO {
      * @param ids ids
      * @return
      */
-    override def getByIds(ids: Seq[String]): Future[List[D]] =
+    override def getByIds(ids: Seq[String])(implicit ec: ExecutionContext): Future[List[D]] =
       try {
         collection.find(
           Json.obj("_id" ->
