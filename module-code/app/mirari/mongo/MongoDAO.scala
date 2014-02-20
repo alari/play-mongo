@@ -64,7 +64,8 @@ abstract class MongoDAO[D <% MongoDomain[_]](val collectionName: String) extends
    * Ensures common non-unique index
    * @param key column -> index type
    */
-  protected def ensureIndex(key: (String, IndexType)*)(implicit ec: ExecutionContext) {
+  protected def ensureIndex(key: (String, IndexType)*) {
+    import play.api.libs.concurrent.Execution.Implicits.defaultContext
     ensureIndex(unique = false)(key: _*)
   }
 
@@ -77,7 +78,8 @@ abstract class MongoDAO[D <% MongoDomain[_]](val collectionName: String) extends
    * @param key column -> Ascending, Descending or other index type
    * @return
    */
-  protected def ensureIndex(unique: Boolean = false, dropDups: Boolean = false, sparse: Boolean = false, name: Option[String] = None)(key: (String, IndexType)*)(implicit ec: ExecutionContext) {
+  protected def ensureIndex(unique: Boolean = false, dropDups: Boolean = false, sparse: Boolean = false, name: Option[String] = None)(key: (String, IndexType)*) {
+    import play.api.libs.concurrent.Execution.Implicits.defaultContext
     collection.indexesManager.ensure(Index(key, unique = unique, dropDups = dropDups, sparse = sparse, name = name))
   }
 
