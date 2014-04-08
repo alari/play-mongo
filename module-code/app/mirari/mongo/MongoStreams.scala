@@ -13,9 +13,12 @@ trait MongoStreams[D <: MongoDomain[_]] {
   self: MongoDAO[D] =>
 
   object Stream {
-    private implicit def toEnum[K](f: => Future[Option[K]])(implicit ec: ExecutionContext) = Enumerator.generateM(f)
+    private implicit def toEnum[K](f: => Future[Option[K]])(implicit ec: ExecutionContext) = Enumerator.flatten(f.map {
+      case Some(d) => Enumerator(d)
+      case _ => Enumerator.empty[K]
+    })
 
-    private implicit def toEnumO[K](f: => Future[K])(implicit ec: ExecutionContext) = Enumerator.generateM(f.map(Option.apply))
+    private implicit def toEnumO[K](f: => Future[K])(implicit ec: ExecutionContext) = Enumerator.flatten(f.map(Enumerator(_)))
 
     /**
      * Maps ids to objects
@@ -49,7 +52,7 @@ trait MongoStreams[D <: MongoDomain[_]] {
      * @return
      */
     def setMulti(implicit ec: ExecutionContext): Enumeratee[(JsObject, JsObject), Boolean] =
-    Enumeratee.mapFlatten(finder => collection.update(finder._1, Json.obj("$set" -> finder._2), multi = true).map(failOrTrue))
+      Enumeratee.mapFlatten(finder => collection.update(finder._1, Json.obj("$set" -> finder._2), multi = true).map(failOrTrue))
 
     /**
      * Updates some fields with $set modifier by id
@@ -88,8 +91,8 @@ trait MongoStreams[D <: MongoDomain[_]] {
      * @param ec
      * @return
      */
-    def findAllSorted(implicit ec: ExecutionContext): Enumeratee[JsObject,D] =
-    Enumeratee.mapFlatten(sort => collection.find(Json.obj()).sort(sort).cursor[D].enumerate())
+    def findAllSorted(implicit ec: ExecutionContext): Enumeratee[JsObject, D] =
+      Enumeratee.mapFlatten(sort => collection.find(Json.obj()).sort(sort).cursor[D].enumerate())
 
     /**
      * Enumerates by finder, offset, limit
