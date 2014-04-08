@@ -18,7 +18,8 @@ import reactivemongo.api.QueryOpts
  * @author alari
  * @since 7/4/13 11:07 PM
  */
-abstract class MongoDAO[D <% MongoDomain[_]](val collectionName: String) extends MongoImplicits {
+abstract class MongoDAO[D <: MongoDomain[_]](val collectionName: String) extends MongoImplicits {
+
   /**
    * ReactiveMongo database accessor
    * @return
@@ -65,7 +66,6 @@ abstract class MongoDAO[D <% MongoDomain[_]](val collectionName: String) extends
    * @param key column -> index type
    */
   protected def ensureIndex(key: (String, IndexType)*) {
-    import play.api.libs.concurrent.Execution.Implicits.defaultContext
     ensureIndex(unique = false)(key: _*)
   }
 
@@ -82,6 +82,12 @@ abstract class MongoDAO[D <% MongoDomain[_]](val collectionName: String) extends
     import play.api.libs.concurrent.Execution.Implicits.defaultContext
     collection.indexesManager.ensure(Index(key, unique = unique, dropDups = dropDups, sparse = sparse, name = name))
   }
+
+  protected def byIdsFinder(ids: TraversableOnce[String]) =
+    Json.obj("_id" ->
+      Json.obj("$in" ->
+        ids.map(toId).toSeq
+      ))
 
   /**
    * Returns an object by id if it's provided,
@@ -130,10 +136,7 @@ abstract class MongoDAO[D <% MongoDomain[_]](val collectionName: String) extends
   def getByIds(ids: Seq[String])(implicit ec: ExecutionContext): Future[List[D]] =
     try {
       collection.find(
-        Json.obj("_id" ->
-          Json.obj("$in" ->
-            ids.map(toId)
-          )))
+        byIdsFinder(ids))
         .cursor[D]
         .collect[List](ids.length)
     } catch {
@@ -293,7 +296,7 @@ abstract class MongoDAO[D <% MongoDomain[_]](val collectionName: String) extends
       collection.remove(finder, firstMatchOnly = true).map(failOrTrue)
     } catch {
       case e: Throwable =>
-      Future.failed(e)
+        Future.failed(e)
     }
 
   /**
@@ -350,29 +353,15 @@ object MongoDAO {
 
     override protected def toId(id: String): JsValue = Json.toJson(BSONObjectID.parse(id).getOrElse(throw new EmptyId()))
 
-    /**
-     * Returns list of objects by ids. Output may be less then input
-     * @param ids ids
-     * @return
-     */
-    override def getByIds(ids: Seq[String])(implicit ec: ExecutionContext): Future[List[D]] =
-      try {
-        collection.find(
-          Json.obj("_id" ->
-            Json.obj("$in" ->
-              ids
-                .view
-                .map(BSONObjectID.parse)
-                .filter(_.isSuccess)
-                .map(_.get)
-                .force
-            )))
-          .cursor[D]
-          .collect[List](ids.length)
-      } catch {
-        case e: Throwable =>
-          Future.failed(e)
-      }
+    override protected def byIdsFinder(ids: TraversableOnce[String]) =
+      Json.obj("_id" ->
+        Json.obj("$in" ->
+          ids
+            .map(BSONObjectID.parse)
+            .filter(_.isSuccess)
+            .map(_.get)
+            .toSeq
+        ))
   }
 
   abstract class Str[D <: MongoDomain.Str](collectionName: String) extends MongoDAO[D](collectionName) {
