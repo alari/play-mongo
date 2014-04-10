@@ -44,7 +44,7 @@ trait MongoStreams[D <: MongoDomain[_]] {
      * @return
      */
     def update(implicit ec: ExecutionContext): Enumeratee[D, D] =
-      Enumeratee.mapFlatten(obj => self.update(obj))
+      Enumeratee.mapM(obj => self.update(obj))
 
     /**
      * Sets a field by a finder
@@ -52,7 +52,7 @@ trait MongoStreams[D <: MongoDomain[_]] {
      * @return
      */
     def setMulti(implicit ec: ExecutionContext): Enumeratee[(JsObject, JsObject), Boolean] =
-      Enumeratee.mapFlatten(finder => collection.update(finder._1, Json.obj("$set" -> finder._2), multi = true).map(failOrTrue))
+      Enumeratee.mapM(finder => collection.update(finder._1, Json.obj("$set" -> finder._2), multi = true).map(failOrTrue))
 
     /**
      * Updates some fields with $set modifier by id
@@ -60,7 +60,7 @@ trait MongoStreams[D <: MongoDomain[_]] {
      * @return
      */
     def set(implicit ec: ExecutionContext): Enumeratee[(String, JsObject), D] =
-      Enumeratee.mapFlatten(obj => self.set(obj._1, obj._2))
+      Enumeratee.mapM(obj => self.set(obj._1, obj._2))
 
     /**
      * Finds one object by finder
@@ -138,7 +138,7 @@ trait MongoStreams[D <: MongoDomain[_]] {
      * @return
      */
     def removeById(implicit ec: ExecutionContext): Enumeratee[String, Boolean] =
-      Enumeratee.mapFlatten(id => self.remove(id))
+      Enumeratee.mapM(id => self.remove(id))
 
     /**
      * Removes one object by finder
@@ -146,7 +146,7 @@ trait MongoStreams[D <: MongoDomain[_]] {
      * @return
      */
     def removeOne(implicit ec: ExecutionContext): Enumeratee[JsObject, Boolean] =
-      Enumeratee.mapFlatten(id => self.remove(id))
+      Enumeratee.mapM(finder => self.remove(finder))
 
     /**
      * Removes all objects by finder
@@ -154,7 +154,7 @@ trait MongoStreams[D <: MongoDomain[_]] {
      * @return
      */
     def removeAll(implicit ec: ExecutionContext): Enumeratee[JsObject, Boolean] =
-      Enumeratee.mapFlatten(id => self.removeAll(id))
+      Enumeratee.mapM(finder => self.removeAll(finder))
 
     /**
      * Inserts a new object
@@ -162,7 +162,7 @@ trait MongoStreams[D <: MongoDomain[_]] {
      * @return
      */
     def insert(implicit ec: ExecutionContext): Enumeratee[D, D] =
-      Enumeratee.mapFlatten(obj => self.insert(obj))
+      Enumeratee.mapM(obj => self.insert(obj))
 
   }
 
