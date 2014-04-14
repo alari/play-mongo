@@ -1,30 +1,31 @@
 name := "play-mongo"
 
-organization := "ru.mirari"
+organization := "play-infra"
 
-version := "1.0-SNAPSHOT"
+version := "0.1"
 
 libraryDependencies ++= Seq(
-    "ru.mirari" %% "play-wished" % "1.0-SNAPSHOT",
+    "play-infra" %% "play-wished" % "0.1",
     "org.reactivemongo" %% "play2-reactivemongo" % "0.10.2"
 )
-
-publishTo := {
-  val artifactory = "http://mvn.quonb.org/artifactory/"
-  if (version.value.trim.endsWith("SNAPSHOT"))
-    Some("Artifactory Realm" at artifactory + "plugins-snapshot-local/")
-  else
-    Some("Artifactory Realm" at artifactory + "plugins-release-local/")
-}
-
-credentials += Credentials(Path.userHome / ".ivy2" / ".credentials")
 
 play.Project.playScalaSettings
 
 resolvers ++= Seq(
-  "quonb" at "http://mvn.quonb.org/repo/",
+  "quonb" at "http://repo.quonb.org/",
   "Sonatype Snapshots" at "http://oss.sonatype.org/content/repositories/snapshots/"
 )
+
+scalacOptions ++= Seq(
+  "-unchecked",
+  "-deprecation",
+  "-Ywarn-dead-code",
+  "-language:_",
+  "-target:jvm-1.7",
+  "-encoding", "UTF-8"
+)
+
+publishTo := Some(Resolver.file("file",  new File( "/mvn-repo" )) )
 
 testOptions in Test += Tests.Argument("junitxml")
 

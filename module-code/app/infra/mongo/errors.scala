@@ -1,7 +1,7 @@
-package mirari.mongo
+package infra.mongo
 
 import reactivemongo.core.commands.LastError
-import mirari.wished.Unwished
+import infra.wished.Unwished
 
 abstract sealed class MongoError(status: Int) extends Unwished(status, None)
 

@@ -1,4 +1,4 @@
-package mirari.mongo
+package infra.mongo
 
 import play.api.Play.current
 

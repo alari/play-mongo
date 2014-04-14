@@ -1,4 +1,4 @@
-package mirari.mongo
+package infra.mongo
 
 import reactivemongo.bson.BSONObjectID
 import org.joda.time.DateTime

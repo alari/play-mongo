@@ -1,4 +1,4 @@
-package mirari.mongo
+package infra.mongo
 
 import scala.concurrent.{Future, ExecutionContext}
 import play.api.libs.json.{Json, JsObject}
@@ -12,7 +12,7 @@ import play.api.libs.iteratee.{Enumerator, Enumeratee}
 trait MongoStreams[D <: MongoDomain[_]] {
   self: MongoDAO[D] =>
 
-  object Stream {
+  object stream {
     private implicit def toEnum[K](f: => Future[Option[K]])(implicit ec: ExecutionContext) = Enumerator.flatten(f.map {
       case Some(d) => Enumerator(d)
       case _ => Enumerator.empty[K]
