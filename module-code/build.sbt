@@ -12,8 +12,7 @@ libraryDependencies ++= Seq(
 play.Project.playScalaSettings
 
 resolvers ++= Seq(
-  "quonb" at "http://repo.quonb.org/",
-  "Sonatype Snapshots" at "http://oss.sonatype.org/content/repositories/snapshots/"
+  "quonb" at "http://repo.quonb.org/"
 )
 
 scalacOptions ++= Seq(
