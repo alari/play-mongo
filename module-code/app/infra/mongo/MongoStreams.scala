@@ -3,7 +3,7 @@ package infra.mongo
 import scala.concurrent.{Future, ExecutionContext}
 import play.api.libs.json.{Json, JsObject}
 import reactivemongo.api.QueryOpts
-import play.api.libs.iteratee.{Enumerator, Enumeratee}
+import play.api.libs.iteratee.{Iteratee, Enumerator, Enumeratee}
 
 /**
  * @author alari
@@ -39,12 +39,29 @@ trait MongoStreams[D <: MongoDomain[_]] {
       Enumeratee.mapFlatten(ids => collection.find(byIdsFinder(ids)).cursor[D].enumerate())
 
     /**
-     * Updates (replaces) object, returns an updated one
+     * Updates object, returns an updated one
      * @param ec
      * @return
      */
     def update(implicit ec: ExecutionContext): Enumeratee[D, D] =
       Enumeratee.mapM(obj => self.update(obj))
+
+    /**
+     * Replaces object, returns an updated one
+     * @param ec
+     * @return
+     */
+    def replace(implicit ec: ExecutionContext): Enumeratee[D, D] =
+      Enumeratee.mapM(obj => self.replace(obj))
+
+    /**
+     * Migrates (reads and replaces back) by a finder
+     * @param finder
+     * @param ec
+     * @return
+     */
+    def migrate(finder: JsObject)(implicit ec: ExecutionContext) =
+      Enumerator(finder) &> findBy ><> replace |>> Iteratee.ignore
 
     /**
      * Sets a field by a finder

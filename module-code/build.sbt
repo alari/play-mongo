@@ -2,7 +2,7 @@ name := "play-mongo"
 
 organization := "play-infra"
 
-version := "0.1"
+version := "0.2"
 
 libraryDependencies ++= Seq(
     "play-infra" %% "play-wished" % "0.1",

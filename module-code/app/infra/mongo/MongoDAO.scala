@@ -162,6 +162,24 @@ abstract class MongoDAO[D <: MongoDomain[_]](val collectionName: String) extends
         Future.failed(e)
     }
 
+  /**
+   * Replaces an object by id
+   * @param obj updated object
+   * @return updated object
+   */
+  def replace(obj: D)(implicit ec: ExecutionContext): Future[D] =
+    try {
+      if (!obj.hasId) Future.failed(EmptyId())
+      else
+        (__ \ "_id").prune(Json.toJson(obj)).asOpt.map {
+          json =>
+            collection.update(toObjectId(obj.id), json).map(failOrObj(obj))
+        } getOrElse Future.failed(NotFound(s"${obj.id} in $collectionName during replace"))
+    } catch {
+      case e: Throwable =>
+        Future.failed(e)
+    }
+
 
   /**
    * Sets properties for id
