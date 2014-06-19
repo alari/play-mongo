@@ -18,7 +18,9 @@ import reactivemongo.api.QueryOpts
  * @author alari
  * @since 7/4/13 11:07 PM
  */
-abstract class MongoDAO[D <: MongoDomain[_]](val collectionName: String) extends MongoImplicits {
+abstract class MongoDAO[D <: MongoDomain[_]](val collectionName: String, service: String = "") extends MongoImplicits with MongoError {
+
+  override val serviceName = if(service.isEmpty) collectionName else service
 
   /**
    * ReactiveMongo database accessor
@@ -112,7 +114,7 @@ abstract class MongoDAO[D <: MongoDomain[_]](val collectionName: String) extends
     try {
       collection.find(toObjectId(id)).one[D] map {
         case Some(d) => d
-        case None => throw NotFound(s"$id in $collectionName")
+        case None => throw notFound()
       }
     } catch {
       case e: Throwable =>
@@ -151,12 +153,12 @@ abstract class MongoDAO[D <: MongoDomain[_]](val collectionName: String) extends
    */
   def update(obj: D)(implicit ec: ExecutionContext): Future[D] =
     try {
-      if (!obj.hasId) Future.failed(EmptyId())
+      if (!obj.hasId) Future.failed(emptyId())
       else
         (__ \ "_id").prune(Json.toJson(obj)).asOpt.map {
           json =>
             collection.update(toObjectId(obj.id), Json.obj("$set" -> json)).map(failOrObj(obj))
-        } getOrElse Future.failed(NotFound(s"${obj.id} in $collectionName during update"))
+        } getOrElse Future.failed(notFound())
     } catch {
       case e: Throwable =>
         Future.failed(e)
@@ -169,12 +171,12 @@ abstract class MongoDAO[D <: MongoDomain[_]](val collectionName: String) extends
    */
   def replace(obj: D)(implicit ec: ExecutionContext): Future[D] =
     try {
-      if (!obj.hasId) Future.failed(EmptyId())
+      if (!obj.hasId) Future.failed(emptyId())
       else
         (__ \ "_id").prune(Json.toJson(obj)).asOpt.map {
           json =>
             collection.update(toObjectId(obj.id), json).map(failOrObj(obj))
-        } getOrElse Future.failed(NotFound(s"${obj.id} in $collectionName during replace"))
+        } getOrElse Future.failed(notFound())
     } catch {
       case e: Throwable =>
         Future.failed(e)
@@ -193,7 +195,7 @@ abstract class MongoDAO[D <: MongoDomain[_]](val collectionName: String) extends
         lastError =>
           lastError.inError match {
             case true =>
-              Future.failed(DatabaseError(lastError))
+              Future.failed(databaseError(lastError))
             case false =>
               getById(id)
           }
@@ -338,7 +340,7 @@ abstract class MongoDAO[D <: MongoDomain[_]](val collectionName: String) extends
    */
   protected def insert(obj: D)(implicit ec: ExecutionContext): Future[D] =
     if (!obj.hasId)
-      Future.failed(EmptyId())
+      Future.failed(emptyId())
     else try {
       collection.insert(obj).map(failOrObj(obj))
     } catch {
@@ -353,7 +355,7 @@ abstract class MongoDAO[D <: MongoDomain[_]](val collectionName: String) extends
    * @return obj
    */
   protected def failOrObj(obj: D)(err: LastError): D =
-    if (err.inError) throw DatabaseError(err) else obj
+    if (err.inError) throw databaseError(err) else obj
 
   /**
    * Throws DatabaseError in error state, returns true otherwise
@@ -361,7 +363,7 @@ abstract class MongoDAO[D <: MongoDomain[_]](val collectionName: String) extends
    * @return true
    */
   protected def failOrTrue(err: LastError): Boolean =
-    if (err.inError) throw DatabaseError(err) else true
+    if (err.inError) throw databaseError(err) else true
 }
 
 object MongoDAO {
@@ -369,7 +371,7 @@ object MongoDAO {
   abstract class Oid[D <: MongoDomain.Oid](collectionName: String) extends MongoDAO[D](collectionName) with MongoImplicits {
     protected def generateSomeId = Some(BSONObjectID.generate)
 
-    override protected def toId(id: String): JsValue = Json.toJson(BSONObjectID.parse(id).getOrElse(throw new EmptyId()))
+    override protected def toId(id: String): JsValue = Json.toJson(BSONObjectID.parse(id).getOrElse(throw emptyId()))
 
     override protected def byIdsFinder(ids: TraversableOnce[String]) =
       Json.obj("_id" ->

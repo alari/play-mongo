@@ -64,6 +64,14 @@ trait MongoStreams[D <: MongoDomain[_]] {
       Enumerator(finder) &> findBy ><> replace |>> Iteratee.ignore
 
     /**
+     * Simple migrator plays well with json-schema-migrate
+     * @param version
+     * @return
+     */
+    def migrateSimple(version: Int) =
+      migrate(Json.obj("jsonSchemaVersion" -> Json.obj("$lt" -> version)))(play.api.libs.concurrent.Execution.defaultContext)
+
+    /**
      * Sets a field by a finder
      * @param ec
      * @return

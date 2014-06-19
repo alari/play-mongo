@@ -2,14 +2,18 @@ name := "play-mongo"
 
 organization := "play-infra"
 
-version := "0.2"
+version := "0.3.0"
+
+resolvers += "Sonatype Snapshots" at "https://oss.sonatype.org/content/repositories/snapshots/"
 
 libraryDependencies ++= Seq(
-    "play-infra" %% "play-wished" % "0.1",
-    "org.reactivemongo" %% "play2-reactivemongo" % "0.10.2"
+    "play-infra" %% "play-wished" % "0.3.0",
+    "org.reactivemongo" %% "play2-reactivemongo" % "0.10.5.akka23-SNAPSHOT"
 )
 
-play.Project.playScalaSettings
+crossScalaVersions := Seq("2.10.4", "2.11.1")
+
+lazy val root = (project in file(".")).enablePlugins(play.PlayScala)
 
 resolvers ++= Seq(
   "quonb" at "http://repo.quonb.org/"
