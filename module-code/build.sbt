@@ -2,7 +2,7 @@ name := "play-mongo"
 
 organization := "play-infra"
 
-version := "0.3.0"
+version := "0.3.1"
 
 resolvers += "Sonatype Snapshots" at "https://oss.sonatype.org/content/repositories/snapshots/"
 
