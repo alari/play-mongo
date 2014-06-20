@@ -368,7 +368,7 @@ abstract class MongoDAO[D <: MongoDomain[_]](val collectionName: String, service
 
 object MongoDAO {
 
-  abstract class Oid[D <: MongoDomain.Oid](collectionName: String) extends MongoDAO[D](collectionName) with MongoImplicits {
+  abstract class Oid[D <: MongoDomain.Oid](collectionName: String, service: String = "") extends MongoDAO[D](collectionName, service) with MongoImplicits {
     protected def generateSomeId = Some(BSONObjectID.generate)
 
     override protected def toId(id: String): JsValue = Json.toJson(BSONObjectID.parse(id).getOrElse(throw emptyId()))
@@ -384,7 +384,7 @@ object MongoDAO {
         ))
   }
 
-  abstract class Str[D <: MongoDomain.Str](collectionName: String) extends MongoDAO[D](collectionName) {
+  abstract class Str[D <: MongoDomain.Str](collectionName: String, service: String = "") extends MongoDAO[D](collectionName, service) {
     override protected def toId(id: String) = JsString(id)
   }
 
