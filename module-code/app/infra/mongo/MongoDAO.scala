@@ -1,5 +1,7 @@
 package infra.mongo
 
+import java.util.UUID
+
 import play.api.Play.current
 
 import scala.concurrent.{ExecutionContext, Future}
@@ -386,6 +388,12 @@ object MongoDAO {
 
   abstract class Str[D <: MongoDomain.Str](collectionName: String, service: String = "") extends MongoDAO[D](collectionName, service) {
     override protected def toId(id: String) = JsString(id)
+  }
+
+  abstract class Uuid[D <: MongoDomain.Uuid](collectionName: String, service: String = "") extends MongoDAO[D](collectionName, service) {
+    protected def generateSomeId = Some(UUID.randomUUID())
+
+    override protected def toId(id: String) = JsString(id.toString)
   }
 
 }
