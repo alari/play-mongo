@@ -2,6 +2,10 @@ package infra.mongo
 
 import java.util.UUID
 
+import _root_.reactivemongo.bson.BSONDocument
+import _root_.reactivemongo.bson.BSONObjectID
+import _root_.reactivemongo.core.commands.Count
+import org.joda.time.DateTime
 import play.api.Play.current
 
 import scala.concurrent.{ExecutionContext, Future}
@@ -384,6 +388,13 @@ object MongoDAO {
             .map(_.get)
             .toSeq
         ))
+
+    def idDateTimeFinder(since: DateTime, until: DateTime) = Json.obj("_id" -> Json.obj("$lt" -> BSONObjectID.fromTime(until.getMillis), "$gt" -> BSONObjectID.fromTime(since.getMillis)))
+
+    def countByIdDateTime(since: DateTime, until: DateTime)(implicit ec: ExecutionContext): Future[Int] = db.command(Count(collectionName, Some(BSONDocument("_id" -> BSONDocument(
+      "$lt" -> BSONObjectID.fromTime(until.getMillis),
+      "$gt" -> BSONObjectID.fromTime(since.getMillis)
+    )))))
   }
 
   abstract class Str[D <: MongoDomain.Str](collectionName: String, service: String = "") extends MongoDAO[D](collectionName, service) {

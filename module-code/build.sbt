@@ -2,7 +2,7 @@ name := "play-mongo"
 
 organization := "play-infra"
 
-version := "0.3.2"
+version := "0.3.3"
 
 resolvers += "Sonatype Snapshots" at "https://oss.sonatype.org/content/repositories/snapshots/"
 
@@ -11,7 +11,7 @@ libraryDependencies ++= Seq(
     "org.reactivemongo" %% "play2-reactivemongo" % "0.10.5.akka23-SNAPSHOT"
 )
 
-crossScalaVersions := Seq("2.10.4", "2.11.4")
+crossScalaVersions := Seq("2.10.4", "2.11.6")
 
 lazy val root = (project in file(".")).enablePlugins(play.PlayScala)
 
