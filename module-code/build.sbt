@@ -2,13 +2,13 @@ name := "play-mongo"
 
 organization := "play-infra"
 
-version := "0.3.3"
+version := "0.3.4"
 
 resolvers += "Sonatype Snapshots" at "https://oss.sonatype.org/content/repositories/snapshots/"
 
 libraryDependencies ++= Seq(
     "play-infra" %% "play-wished" % "0.3.0",
-    "org.reactivemongo" %% "play2-reactivemongo" % "0.10.5.akka23-SNAPSHOT"
+    "org.reactivemongo" %% "play2-reactivemongo" % "0.10.5.0.akka23"
 )
 
 crossScalaVersions := Seq("2.10.4", "2.11.6")
