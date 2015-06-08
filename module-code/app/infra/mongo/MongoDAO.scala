@@ -3,7 +3,6 @@ package infra.mongo
 import java.util.UUID
 
 import _root_.reactivemongo.bson.BSONDocument
-import _root_.reactivemongo.bson.BSONObjectID
 import _root_.reactivemongo.core.commands.Count
 import org.joda.time.DateTime
 import play.api.Play.current

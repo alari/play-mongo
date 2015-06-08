@@ -2,9 +2,8 @@ package infra.mongo
 
 import java.util.UUID
 
-import reactivemongo.bson.BSONObjectID
 import org.joda.time.DateTime
-import play.api.libs.json.{JsString, Json, JsValue}
+import reactivemongo.bson.BSONObjectID
 
 import scala.util.Try
 
@@ -16,7 +15,9 @@ import scala.util.Try
  */
 trait MongoDomain[Id] {
   def _id: Option[Id]
+
   def id: String
+
   def hasId = _id.isDefined
 }
 
@@ -25,7 +26,7 @@ object MongoDomain {
   /**
    * Domain with ObjectID _id
    */
-  trait Oid extends MongoDomain[BSONObjectID]{
+  trait Oid extends MongoDomain[BSONObjectID] {
     def id = _id.map(_.stringify).getOrElse("")
 
     def idTimestamp = _id.map(_.time)
@@ -54,7 +55,7 @@ object MongoDomain {
   trait Uuid extends MongoDomain[UUID] {
     def id = _id.map(_.toString).getOrElse("")
 
-    def idTimestamp: Option[Long] = Try(_id.map(_.timestamp()/10)).getOrElse(None)
+    def idTimestamp: Option[Long] = Try(_id.map(_.timestamp() / 10)).getOrElse(None)
 
     def idDatetime = idTimestamp.map(new DateTime(_))
   }
@@ -62,4 +63,5 @@ object MongoDomain {
   object Uuid {
     type Id = Option[UUID]
   }
+
 }
